@@ -1,11 +1,24 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const TrainerModel = require("../Models/Trainer");
 const bcrypt = require("bcrypt");
 
 const router = express.Router();
 
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"]
+  const token = authHeader && authHeader.split(' ')[1]
+  if(token == null)return res.status(401).json({message: 'authorization missing'})
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, trainer) => {
+    if(err) return res.status(403)
+    req.trainer = trainer
+    next()
+  })
+}
+
 //Get All Trainers
-router.get("/", async (req, res, next) => {
+router.get("/", authenticateToken, async (req, res, next) => {
   try {
     const trainers = await TrainerModel.find();
     res.json(trainers);
@@ -15,7 +28,7 @@ router.get("/", async (req, res, next) => {
 });
 
 //Get Trainer
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", authenticateToken, async (req, res, next) => {
   try {
     const trainerById = await TrainerModel.findById(req.params.id);
     res.json(trainerById);
@@ -25,7 +38,7 @@ router.get("/:id", async (req, res, next) => {
 });
 
 //Update Trainer
-router.patch("/:id", async (req, res, next) => {
+router.patch("/:id", authenticateToken,async (req, res, next) => {
   try {
     const id = req.params.id;
     const updatedTrainer = req.body;
@@ -53,7 +66,8 @@ router.post("/", async (req, res, next) => {
   });
   try {
     const registerTrainer = await trainer.save();
-    res.status(200).json(registerTrainer);
+    const accessToken = jwt.sign({registerTrainer}, process.env.ACCESS_TOKEN_SECRET)
+    res.status(200).json({accessToken:accessToken});
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -68,29 +82,29 @@ router.post("/Login", async (req, res, next) => {
     });
   }
   try {
-    const trainer = await TrainerModel.findOne({ email:req.body.email})
+    const trainer = await TrainerModel.findOne({ email: req.body.email });
     if (!trainer) {
-        res.status(401).json({
-          message: "Login not successful",
-          error: "User not found",
-        })
-      } else {
-        bcrypt.compare(password, trainer.password).then(function (result) {
-            result
-              ? res.status(200).json({
-                  message: "Login successful",
-                  trainer,
-                })
-              : res.status(400).json({ message: "Login not succesful" })
-          })
-      }
+      res.status(401).json({
+        message: "Login not successful",
+        error: "User not found",
+      });
+    } else {
+      bcrypt.compare(password, trainer.password).then(function (result) {
+        if (result == true) {
+          const accessToken = jwt.sign({trainer}, process.env.ACCESS_TOKEN_SECRET)
+          res.status(200).json({accessToken:accessToken});
+        } else {
+          res.status(400).json({ message: "Login not succesful" });
+        }
+      });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
 //Delete Trainer
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", authenticateToken,async (req, res, next) => {
   try {
     const id = req.params.id;
     const result = await TrainerModel.findByIdAndDelete(id);

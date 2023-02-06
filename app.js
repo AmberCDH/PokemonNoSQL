@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const TrainerRoute = require('./Routes/Trainer')
 
+const neo4j = require('neo4j-driver')
 const http = require('http');
 const express = require('express');
 const mongoose = require('mongoose');
@@ -27,6 +28,7 @@ app.use('/', function(req, res) {
     res.send('NoSQL pokemon API works');
 });
 const server = http.createServer(app);
+
 
 server.listen(port);console.debug('localhost:' + port + '/');
 
