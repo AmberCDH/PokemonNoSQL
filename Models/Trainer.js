@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const {ObjectId} = mongoose.Schema; 
 
 const trainerSchema = new mongoose.Schema({
     username: {
@@ -19,12 +20,27 @@ const trainerSchema = new mongoose.Schema({
     birthday: {
         required: false
     },
-    // regionId: {
-    //     required: true
-    // },
-    // fiendList: {
-    //     required: false
-    // }
+    region: {
+        regionName:{
+            required:true,
+            type:String
+        },
+        route:{
+            required:true,
+            type:Number,
+        },
+        champion:{
+            required:false,
+            type:String
+        }
+    },
+    fiendList: {
+        fiendId:{
+            type: ObjectId, 
+            ref: 'Trainer',
+            unique: true
+        }
+    }
 
 })
 

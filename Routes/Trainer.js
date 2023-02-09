@@ -5,16 +5,16 @@ const bcrypt = require("bcrypt");
 
 const router = express.Router();
 
-
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"]
-  const token = authHeader && authHeader.split(' ')[1]
-  if(token == null)return res.status(401).json({message: 'authorization missing'})
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (token == null)
+    return res.status(401).json({ message: "authorization missing" });
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, trainer) => {
-    if(err) return res.status(403)
-    req.trainer = trainer
-    next()
-  })
+    if (err) return res.status(403);
+    req.trainer = trainer;
+    next();
+  });
 }
 
 //Get All Trainers
@@ -38,7 +38,7 @@ router.get("/:id", authenticateToken, async (req, res, next) => {
 });
 
 //Update Trainer
-router.patch("/:id", authenticateToken,async (req, res, next) => {
+router.patch("/:id", authenticateToken, async (req, res, next) => {
   try {
     const id = req.params.id;
     const updatedTrainer = req.body;
@@ -63,11 +63,19 @@ router.post("/", async (req, res, next) => {
     password: await bcrypt.hash(req.body.password, 10),
     email: req.body.email,
     birthday: req.body.birthday,
+    region: {
+      regionName: req.body.regionName,
+      route: req.body.route,
+      champion: req.body.champion,
+    },
   });
   try {
     const registerTrainer = await trainer.save();
-    const accessToken = jwt.sign({registerTrainer}, process.env.ACCESS_TOKEN_SECRET)
-    res.status(200).json({accessToken:accessToken});
+    const accessToken = jwt.sign(
+      { registerTrainer },
+      process.env.ACCESS_TOKEN_SECRET
+    );
+    res.status(200).json({ accessToken: accessToken });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -91,8 +99,11 @@ router.post("/Login", async (req, res, next) => {
     } else {
       bcrypt.compare(password, trainer.password).then(function (result) {
         if (result == true) {
-          const accessToken = jwt.sign({trainer}, process.env.ACCESS_TOKEN_SECRET)
-          res.status(200).json({accessToken:accessToken});
+          const accessToken = jwt.sign(
+            { trainer },
+            process.env.ACCESS_TOKEN_SECRET
+          );
+          res.status(200).json({ accessToken: accessToken });
         } else {
           res.status(400).json({ message: "Login not succesful" });
         }
@@ -104,12 +115,45 @@ router.post("/Login", async (req, res, next) => {
 });
 
 //Delete Trainer
-router.delete("/:id", authenticateToken,async (req, res, next) => {
+router.delete("/:id", authenticateToken, async (req, res, next) => {
   try {
     const id = req.params.id;
     const result = await TrainerModel.findByIdAndDelete(id);
 
     res.status(200).json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.patch("/:id/Request", authenticateToken, async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const options = { new: true };
+    const idFriend = req.body.fiendList.fiendId;
+
+    const result = await TrainerModel.findOneAndUpdate(
+      { _id: id },
+      {
+        $addToSet: {
+          fiendList: {
+            fiendId: idFriend,
+          },
+        },
+      }
+    );
+    const friendSave = await TrainerModel.findOneAndUpdate(
+      { _id: idFriend },
+      {
+        $addToSet: {
+          fiendList: {
+            fiendId: id,
+          },
+        },
+      }
+    );
+
+    res.status(200).json({ Trainer: result, Friend: friendSave });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

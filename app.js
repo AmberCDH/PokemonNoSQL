@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const TrainerRoute = require('./Routes/Trainer')
+const RequestFriendshipRoute = require('./Routes/RequestFriendship')
 
 const neo4j = require('neo4j-driver')
 const http = require('http');
@@ -24,6 +25,7 @@ database.once('connected', () => {
 const app = express();
 app.use(express.json());
 app.use("/Trainer",TrainerRoute)
+app.use('/Request',RequestFriendshipRoute)
 app.use('/', function(req, res) {
     res.send('NoSQL pokemon API works');
 });
