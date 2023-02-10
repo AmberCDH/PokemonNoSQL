@@ -37,9 +37,12 @@ const trainerSchema = new mongoose.Schema({
     fiendList: {
         fiendId:{
             type: ObjectId, 
-            ref: 'Trainer',
-            unique: true
-        }
+            ref: 'Trainer'
+        },
+        username: {
+            type: String,
+            ref: 'Trainer'
+        },
     }
 
 })

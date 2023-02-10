@@ -131,29 +131,45 @@ router.patch("/:id/Request", authenticateToken, async (req, res, next) => {
     const id = req.params.id;
     const options = { new: true };
     const idFriend = req.body.fiendList.fiendId;
-
-    const result = await TrainerModel.findOneAndUpdate(
-      { _id: id },
-      {
-        $addToSet: {
-          fiendList: {
-            fiendId: idFriend,
-          },
-        },
+    const trainer = await TrainerModel.findById(id);
+    const friendRequest = await TrainerModel.findById(idFriend);
+    const friends = friendRequest.fiendList.toJSON();
+    if (friends && Object.keys(friends).length === 0) {
+    } else {
+      for (let friend of friends) {
+        if (friend.fiendId == id) {
+          return res.status(400).json({ message: "U were already friends" }).end()
+        }
       }
-    );
-    const friendSave = await TrainerModel.findOneAndUpdate(
-      { _id: idFriend },
-      {
-        $addToSet: {
-          fiendList: {
-            fiendId: id,
-          },
-        },
-      }
-    );
+    }
 
-    res.status(200).json({ Trainer: result, Friend: friendSave });
+    if (trainer && friendRequest) {
+        const result = await TrainerModel.findOneAndUpdate(
+          { _id: id },
+          {
+            $push: {
+              fiendList: {
+                fiendId: idFriend,
+                username: friendRequest.username,
+              },
+            },
+          }
+        );
+        const friendSave = await TrainerModel.findOneAndUpdate(
+          { _id: idFriend },
+          {
+            $push: {
+              fiendList: {
+                fiendId: id,
+                username: trainer.username,
+              },
+            },
+          }
+        );
+        return res.status(200).json({ Trainer: result, Friend: friendSave }).end()
+    } else {
+      return res.status(400).json({ message: "No Trainers found :(" }).end()
+    }
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
