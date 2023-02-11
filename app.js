@@ -1,6 +1,8 @@
 require('dotenv').config();
 
 const TrainerRoute = require('./Routes/Trainer')
+const PokemonRoute = require('./Routes/Pokemon')
+const ItemRoute = require('./Routes/Item')
 const RequestFriendshipRoute = require('./Routes/RequestFriendship')
 
 const neo4j = require('neo4j-driver')
@@ -24,6 +26,8 @@ database.once('connected', () => {
 
 const app = express();
 app.use(express.json());
+app.use("/Item", ItemRoute)
+app.use("/Pokemon", PokemonRoute)
 app.use("/Trainer",TrainerRoute)
 app.use('/Request',RequestFriendshipRoute)
 app.use('/', function(req, res) {

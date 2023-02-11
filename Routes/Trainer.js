@@ -21,7 +21,7 @@ function authenticateToken(req, res, next) {
 router.get("/", authenticateToken, async (req, res, next) => {
   try {
     const trainers = await TrainerModel.find();
-    res.json(trainers);
+    res.status(200).json(trainers);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -119,13 +119,13 @@ router.delete("/:id", authenticateToken, async (req, res, next) => {
   try {
     const id = req.params.id;
     const result = await TrainerModel.findByIdAndDelete(id);
-
     res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
+//Accept friendRequest
 router.patch("/:id/Request", authenticateToken, async (req, res, next) => {
   try {
     const id = req.params.id;
@@ -138,37 +138,43 @@ router.patch("/:id/Request", authenticateToken, async (req, res, next) => {
     } else {
       for (let friend of friends) {
         if (friend.fiendId == id) {
-          return res.status(400).json({ message: "U were already friends" }).end()
+          return res
+            .status(400)
+            .json({ message: "U were already friends" })
+            .end();
         }
       }
     }
 
     if (trainer && friendRequest) {
-        const result = await TrainerModel.findOneAndUpdate(
-          { _id: id },
-          {
-            $push: {
-              fiendList: {
-                fiendId: idFriend,
-                username: friendRequest.username,
-              },
+      const result = await TrainerModel.findOneAndUpdate(
+        { _id: id },
+        {
+          $push: {
+            fiendList: {
+              fiendId: idFriend,
+              username: friendRequest.username,
             },
-          }
-        );
-        const friendSave = await TrainerModel.findOneAndUpdate(
-          { _id: idFriend },
-          {
-            $push: {
-              fiendList: {
-                fiendId: id,
-                username: trainer.username,
-              },
+          },
+        }
+      );
+      const friendSave = await TrainerModel.findOneAndUpdate(
+        { _id: idFriend },
+        {
+          $push: {
+            fiendList: {
+              fiendId: id,
+              username: trainer.username,
             },
-          }
-        );
-        return res.status(200).json({ Trainer: result, Friend: friendSave }).end()
+          },
+        }
+      );
+      return res
+        .status(200)
+        .json({ Trainer: result, Friend: friendSave })
+        .end();
     } else {
-      return res.status(400).json({ message: "No Trainers found :(" }).end()
+      return res.status(400).json({ message: "No Trainers found :(" }).end();
     }
   } catch (error) {
     res.status(400).json({ message: error.message });
