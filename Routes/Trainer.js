@@ -2,8 +2,15 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const TrainerModel = require("../Models/Trainer");
 const bcrypt = require("bcrypt");
+const neo4j = require("neo4j-driver");
 
 const router = express.Router();
+
+const driver = neo4j.driver(
+  process.env.NEO4J_URI,
+  neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
+);
+const session = driver.session();
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -64,9 +71,9 @@ router.post("/", async (req, res, next) => {
     email: req.body.email,
     birthday: req.body.birthday,
     region: {
-      regionName: req.body.regionName,
-      route: req.body.route,
-      champion: req.body.champion,
+      regionName: req.body.region.regionName,
+      route: req.body.region.route,
+      champion: req.body.region.champion,
     },
   });
   try {
@@ -75,6 +82,16 @@ router.post("/", async (req, res, next) => {
       { registerTrainer },
       process.env.ACCESS_TOKEN_SECRET
     );
+    const result = await session.run(
+      `CREATE (n:Trainer {username: $username, email: $email, _id: $_id}) return n`,
+      {
+        username: registerTrainer.username,
+        email: registerTrainer.email,
+        _id: registerTrainer.id,
+
+      }
+    );
+    console.log(result)
     res.status(200).json({ accessToken: accessToken });
   } catch (error) {
     res.status(400).json({ message: error.message });
