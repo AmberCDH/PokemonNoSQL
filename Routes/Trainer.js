@@ -57,6 +57,15 @@ router.patch("/:id", authenticateToken, async (req, res, next) => {
       options
     );
 
+    const updateRes = await session.run(
+      `MATCH (n:Trainer {_id: $_id}) SET n = {username : $username, email: $email, _id: $_id} RETURN n`,
+      {
+        username: result.username,
+        email: result.email,
+        _id: id,
+      }
+    );
+
     res.send(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -88,10 +97,8 @@ router.post("/", async (req, res, next) => {
         username: registerTrainer.username,
         email: registerTrainer.email,
         _id: registerTrainer.id,
-
       }
     );
-    console.log(result)
     res.status(200).json({ accessToken: accessToken });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -136,6 +143,12 @@ router.delete("/:id", authenticateToken, async (req, res, next) => {
   try {
     const id = req.params.id;
     const result = await TrainerModel.findByIdAndDelete(id);
+    const deleteRes = await session.run(
+      `MATCH (n:Trainer {_id: $_id}) DELETE n`,
+      {
+        _id: id,
+      }
+    );
     res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -184,6 +197,13 @@ router.patch("/:id/Request", authenticateToken, async (req, res, next) => {
               username: trainer.username,
             },
           },
+        }
+      );      
+      const friendship = await session.run(
+        `MATCH (a:Trainer  {_id: $_id_a}) MATCH (b:Trainer  {_id: $_id_b}) CREATE (a)-[relation:FRIENDS_WITH]->(b)`,
+        {
+          _id_a: trainer.id,
+          _id_b: friendRequest.id,
         }
       );
       return res
