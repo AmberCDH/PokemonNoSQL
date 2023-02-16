@@ -198,9 +198,9 @@ router.patch("/:id/Request", authenticateToken, async (req, res, next) => {
             },
           },
         }
-      );      
+      );
       const friendship = await session.run(
-        `MATCH (a:Trainer  {_id: $_id_a}) MATCH (b:Trainer  {_id: $_id_b}) CREATE (a)-[relation:FRIENDS_WITH]->(b)`,
+        `MATCH (a:Trainer {_id: $_id_a}) MATCH (b:Trainer {_id: $_id_b}) CREATE (a)-[relation:FRIENDS_WITH]->(b)`,
         {
           _id_a: trainer.id,
           _id_b: friendRequest.id,
@@ -215,6 +215,37 @@ router.patch("/:id/Request", authenticateToken, async (req, res, next) => {
     }
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+//Trainer can see friends of friends
+router.get("/:id/FriendsOfFriends", authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    var ids = [];
+    const friendOfFriend = await session.run(
+      `MATCH (n:Trainer {_id: $_id}) MATCH  (n)-[:FRIENDS_WITH*2]-(m) WHERE NOT (n)-[:FRIENDS_WITH]-(m) RETURN m`, 
+      {
+        _id: id
+      }
+      ).then(function(result){
+        result.records.forEach(function(record){
+          ids.push(record._fields[0].properties._id);
+        })
+        return ids
+      })
+      .then((ids)=>{
+        TrainerModel.find({_id: { $in: ids}})
+            .then((trainersFriends) => {
+            res.status(200).json(trainersFriends);
+          })
+      })
+      .catch((error) => {
+        res.status(400).json(error);
+      })
+      // return res.status(200).json({friendsOfFriends: friendOfFriend}).end()
+  } catch (error) {
+    return res.status(400).json({message:error.message}).end()
   }
 });
 
