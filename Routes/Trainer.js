@@ -57,6 +57,15 @@ router.patch("/:id", authenticateToken, async (req, res, next) => {
       options
     );
 
+    if (updatedTrainer.region.regionName) {
+      await checkAndCreateRegion(
+        req.body.region.regionName,
+        req.body.region.champion,
+        id,
+        true
+      );
+    }
+
     const updateRes = await session.run(
       `MATCH (n:Trainer {_id: $_id}) SET n = {username : $username, email: $email, _id: $_id} RETURN n`,
       {
@@ -65,7 +74,6 @@ router.patch("/:id", authenticateToken, async (req, res, next) => {
         _id: id,
       }
     );
-
     res.send(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -99,11 +107,57 @@ router.post("/", async (req, res, next) => {
         _id: registerTrainer.id,
       }
     );
+    await checkAndCreateRegion(
+      req.body.region.regionName,
+      req.body.region.champion,
+      registerTrainer.id,
+      false
+    );
+
     res.status(200).json({ accessToken: accessToken });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
+
+//Check and create a region
+async function checkAndCreateRegion(regionName, champion, idTrainer, bool) {
+  const sessionTwo = driver.session();
+  var exists;
+  try {
+    if (bool) {
+      const updateReqion = await session.run(
+        `MATCH (t:Trainer {_id: $_id})-[relation:IS_IN]->() DELETE relation`,
+        { _id: idTrainer }
+      );
+    }
+    const obj = await session.run(
+      `MATCH (r:Region {regionName: $regionName}) return r`,
+      {
+        regionName: regionName,
+      }
+    );
+    exists = obj.records.length;
+    if (exists == 0) {
+      const region = await session.run(
+        `CREATE (r:Region {regionName: $regionName}) return r`,
+        {
+          regionName: regionName,
+          champion: champion,
+        }
+      );
+    }
+    const regionRelation = await session.run(
+      `MATCH (a:Trainer {_id: $_id}) MATCH (b:Region {regionName: $regionName}) CREATE (a)-[relation:IS_IN]->(b)`,
+      {
+        _id: idTrainer,
+        regionName: regionName,
+      }
+    );
+  } catch (error) {
+    throw error;
+  }
+}
 
 //Login Trainer
 router.post("/Login", async (req, res, next) => {
@@ -223,29 +277,30 @@ router.get("/:id/FriendsOfFriends", authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
     var ids = [];
-    const friendOfFriend = await session.run(
-      `MATCH (n:Trainer {_id: $_id}) MATCH  (n)-[:FRIENDS_WITH*2]-(m) WHERE NOT (n)-[:FRIENDS_WITH]-(m) RETURN m`, 
-      {
-        _id: id
-      }
-      ).then(function(result){
-        result.records.forEach(function(record){
+    const friendOfFriend = await session
+      .run(
+        `MATCH (n:Trainer {_id: $_id}) MATCH  (n)-[:FRIENDS_WITH*2]-(m) WHERE NOT (n)-[:FRIENDS_WITH]-(m) RETURN m`,
+        {
+          _id: id,
+        }
+      )
+      .then(function (result) {
+        result.records.forEach(function (record) {
           ids.push(record._fields[0].properties._id);
-        })
-        return ids
+        });
+        return ids;
       })
-      .then((ids)=>{
-        TrainerModel.find({_id: { $in: ids}})
-            .then((trainersFriends) => {
-            res.status(200).json(trainersFriends);
-          })
+      .then((ids) => {
+        TrainerModel.find({ _id: { $in: ids } }).then((trainersFriends) => {
+          res.status(200).json(trainersFriends);
+        });
       })
       .catch((error) => {
         res.status(400).json(error);
-      })
-      // return res.status(200).json({friendsOfFriends: friendOfFriend}).end()
+      });
+    // return res.status(200).json({friendsOfFriends: friendOfFriend}).end()
   } catch (error) {
-    return res.status(400).json({message:error.message}).end()
+    return res.status(400).json({ message: error.message }).end();
   }
 });
 
