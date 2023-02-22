@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const TrainerModel = require("../Models/Trainer");
 const bcrypt = require("bcrypt");
 const neo4j = require("neo4j-driver");
+const authenticateToken = require("../TokenService/Auth")
 
 const router = express.Router();
 
@@ -11,21 +12,10 @@ const driver = neo4j.driver(
   neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
 );
 const session = driver.session();
-
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-  if (token == null)
-    return res.status(401).json({ message: "authorization missing" });
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, trainer) => {
-    if (err) return res.status(403);
-    req.trainer = trainer;
-    next();
-  });
-}
+var trainerId;
 
 //Get All Trainers
-router.get("/", authenticateToken, async (req, res, next) => {
+router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const trainers = await TrainerModel.find();
     res.status(200).json(trainers);
@@ -35,7 +25,7 @@ router.get("/", authenticateToken, async (req, res, next) => {
 });
 
 //Get Trainer
-router.get("/:id", authenticateToken, async (req, res, next) => {
+router.get("/:id", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const trainerById = await TrainerModel.findById(req.params.id);
     res.json(trainerById);
@@ -45,7 +35,7 @@ router.get("/:id", authenticateToken, async (req, res, next) => {
 });
 
 //Update Trainer
-router.patch("/:id", authenticateToken, async (req, res, next) => {
+router.patch("/:id", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const id = req.params.id;
     const updatedTrainer = req.body;
@@ -96,7 +86,7 @@ router.post("/", async (req, res, next) => {
   try {
     const registerTrainer = await trainer.save();
     const accessToken = jwt.sign(
-      { registerTrainer },
+      { email:trainer.email, id:trainer.id, username:trainer.username },
       process.env.ACCESS_TOKEN_SECRET
     );
     const result = await session.run(
@@ -178,7 +168,7 @@ router.post("/Login", async (req, res, next) => {
       bcrypt.compare(password, trainer.password).then(function (result) {
         if (result == true) {
           const accessToken = jwt.sign(
-            { trainer },
+            { email:trainer.email, id:trainer.id, username:trainer.username },
             process.env.ACCESS_TOKEN_SECRET
           );
           res.status(200).json({ accessToken: accessToken });
@@ -193,7 +183,7 @@ router.post("/Login", async (req, res, next) => {
 });
 
 //Delete Trainer
-router.delete("/:id", authenticateToken, async (req, res, next) => {
+router.delete("/:id", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const id = req.params.id;
     const result = await TrainerModel.findByIdAndDelete(id);
@@ -210,7 +200,7 @@ router.delete("/:id", authenticateToken, async (req, res, next) => {
 });
 
 //Accept friendRequest
-router.patch("/:id/Request", authenticateToken, async (req, res, next) => {
+router.patch("/:id/Request", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const id = req.params.id;
     const options = { new: true };
@@ -273,7 +263,7 @@ router.patch("/:id/Request", authenticateToken, async (req, res, next) => {
 });
 
 //Trainer can see friends of friends
-router.get("/:id/FriendsOfFriends", authenticateToken, async (req, res) => {
+router.get("/:id/FriendsOfFriends", authenticateToken.authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
     var ids = [];

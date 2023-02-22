@@ -1,24 +1,12 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
-const { ObjectId } = require("mongodb");
+const authenticateToken = require("../TokenService/Auth")
 const RequestModel = require("../Models/RequestFriendship");
 const TrainerModel = require("../Models/Trainer");
 
 const router = express.Router();
 
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-  if (token == null)
-    return res.status(401).json({ message: "authorization missing" });
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, trainer) => {
-    if (err) return res.status(403);
-    req.trainer = trainer;
-    next();
-  });
-}
 
-router.post("/", authenticateToken, async (req, res) => {
+router.post("/", authenticateToken.authenticateToken, async (req, res) => {
   const receiver = await TrainerModel.findById(req.body.receiver);
   const sender = await TrainerModel.findById(req.body.sender);
   if (receiver && sender) {
@@ -33,7 +21,7 @@ router.post("/", authenticateToken, async (req, res) => {
   }
 });
 
-router.get("/:id", authenticateToken, async (req, res) => {
+router.get("/:id", authenticateToken.authenticateToken, async (req, res) => {
   const receiver = await TrainerModel.findById(req.params.id);
   if(receiver){
     const friendRequests = await RequestModel.find({receiver: receiver})
@@ -44,7 +32,7 @@ router.get("/:id", authenticateToken, async (req, res) => {
 
 });
 
-router.delete("/:id", authenticateToken, async (req, res)=> {
+router.delete("/:id", authenticateToken.authenticateToken, async (req, res)=> {
   try {
     const id = req.params.id;
     const deleteRequest = await RequestModel.findByIdAndDelete(id);

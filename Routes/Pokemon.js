@@ -1,23 +1,12 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
+const authenticateToken = require("../TokenService/Auth")
 const PokemonModel = require("../Models/Pokemon");
 
 const router = express.Router();
 
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-  if (token == null)
-    return res.status(401).json({ message: "authorization missing" });
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, trainer) => {
-    if (err) return res.status(403);
-    req.trainer = trainer;
-    next();
-  });
-}
 
 //Get All Pokemon
-router.get("/", authenticateToken, async (req, res, next) => {
+router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const pokemon = await PokemonModel.find();
     res.status(200).json(pokemon);
@@ -27,7 +16,7 @@ router.get("/", authenticateToken, async (req, res, next) => {
 });
 
 //Get Pokemon
-router.get("/:id", authenticateToken, async (req, res) => {
+router.get("/:id", authenticateToken.authenticateToken, async (req, res) => {
   try {
     const pokemonById = await PokemonModel.findById(req.params.id);
     res.json(pokemonById);
@@ -37,7 +26,7 @@ router.get("/:id", authenticateToken, async (req, res) => {
 });
 
 //Create Pokemon
-router.post("/", authenticateToken, async (req, res, next) => {
+router.post("/", authenticateToken.authenticateToken, async (req, res, next) => {
   const pokemon = new PokemonModel({
     name: req.body.name,
     gender: req.body.gender,
@@ -61,7 +50,7 @@ router.post("/", authenticateToken, async (req, res, next) => {
 });
 
 //Update Pokemon
-router.patch("/:id", authenticateToken, async (req, res) => {
+router.patch("/:id", authenticateToken.authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
     const updatedPokemon = req.body;
@@ -80,7 +69,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 });
 
 //Delete pokemon
-router.delete("/:id", authenticateToken, async (req, res, next) => {
+router.delete("/:id", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const id = req.params.id;
     const result = await PokemonModel.findByIdAndDelete(id);

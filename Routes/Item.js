@@ -1,23 +1,12 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
+const authenticateToken = require("../TokenService/Auth")
 const itemModel = require("../Models/Items");
 
 const router = express.Router();
 
-function authenticateToken(req, res, next) {
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
-    if (token == null)
-      return res.status(401).json({ message: "authorization missing" });
-    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, trainer) => {
-      if (err) return res.status(403);
-      req.trainer = trainer;
-      next();
-    });
-  }
 
 //Get all Items
-router.get("/", authenticateToken, async (req, res, next) => {
+router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const items = await itemModel.find();
     res.status(200).json(items);
@@ -27,7 +16,7 @@ router.get("/", authenticateToken, async (req, res, next) => {
 });
 
 //Get item
-router.get("/:id", authenticateToken, async (req, res) => {
+router.get("/:id", authenticateToken.authenticateToken, async (req, res) => {
   try {
     const itemById = await itemModel.findById(req.params.id);
     res.json(itemById);
@@ -37,7 +26,7 @@ router.get("/:id", authenticateToken, async (req, res) => {
 });
 
 //Create item
-router.post("/", authenticateToken, async (req, res, next) => {
+router.post("/", authenticateToken.authenticateToken, async (req, res, next) => {
   const item = new itemModel({
     name: req.body.name,
     effect: req.body.effect,
@@ -53,7 +42,7 @@ router.post("/", authenticateToken, async (req, res, next) => {
 });
 
 //Update item
-router.patch("/:id", authenticateToken, async (req, res) => {
+router.patch("/:id", authenticateToken.authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
     const updatedItem = req.body;
@@ -68,7 +57,7 @@ router.patch("/:id", authenticateToken, async (req, res) => {
 });
 
 //Delete pokemon
-router.delete("/:id", authenticateToken, async (req, res, next) => {
+router.delete("/:id", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const id = req.params.id;
     const result = await itemModel.findByIdAndDelete(id);
