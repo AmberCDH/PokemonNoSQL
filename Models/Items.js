@@ -15,7 +15,7 @@ const itemSchema = new mongoose.Schema({
     type: String,
     enum: ['Medical Item', 'Poke ball', 'Battle Item', 'Berries', 'Evolution Item', 'Held Item']
   },
-  amountInCoins: {
+  amount: {
     required: true,
     type: Number,
   },

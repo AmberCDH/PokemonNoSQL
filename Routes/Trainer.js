@@ -12,7 +12,6 @@ const driver = neo4j.driver(
   neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
 );
 const session = driver.session();
-var trainerId;
 
 //Get All Trainers
 router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
