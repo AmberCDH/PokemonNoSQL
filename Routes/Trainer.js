@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const TrainerModel = require("../Models/Trainer");
 const bcrypt = require("bcrypt");
 const neo4j = require("neo4j-driver");
-const authenticateToken = require("../TokenService/Auth")
+const authenticateToken = require("../TokenService/Auth");
 
 const router = express.Router();
 
@@ -25,50 +25,63 @@ router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
 });
 
 //Get Trainer
-router.get("/:id", authenticateToken.authenticateToken, async (req, res, next) => {
-  try {
-    const trainerById = await TrainerModel.findById(req.params.id);
-    res.json(trainerById);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+router.get(
+  "/:id",
+  authenticateToken.authenticateToken,
+  async (req, res, next) => {
+    try {
+      const authHeader = req.headers["authorization"];
+      const token = authHeader && authHeader.split(" ")[1];
+      if (token == null) return res.status(401).json({ message: "authorization missing" });
+      var idTrainer = await authenticateToken.decodeToken(token);
+      if(idTrainer == null || req.params.id != idTrainer) return res.status(401).json({message: "permission denied >_<"})
+      const trainerById = await TrainerModel.findById(req.params.id);
+      res.json(trainerById);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
   }
-});
+);
 
 //Update Trainer
-router.patch("/:id", authenticateToken.authenticateToken, async (req, res, next) => {
-  try {
-    const id = req.params.id;
-    const updatedTrainer = req.body;
-    const options = { new: true };
+router.patch(
+  "/:id",
+  authenticateToken.authenticateToken,
+  async (req, res, next) => {
+    try {
+      const id = req.params.id;
+      const updatedTrainer = req.body;
+      const options = { new: true };
 
-    const result = await TrainerModel.findByIdAndUpdate(
-      id,
-      updatedTrainer,
-      options
-    );
-
-    if (updatedTrainer.region.regionName) {
-      await checkAndCreateRegion(
-        req.body.region.regionName,
-        req.body.region.champion,
+      const result = await TrainerModel.findByIdAndUpdate(
         id,
-        true
+        updatedTrainer,
+        options
       );
-    }
 
-    const updateRes = await session.run(
-      `MATCH (n:Trainer {_id: $_id}) SET n = {username : $username, email: $email, _id: $_id} RETURN n`,
-      {
-        username: result.username,
-        email: result.email,
-        _id: id,
+      if (updatedTrainer.region.regionName) {
+        await checkAndCreateRegion(
+          req.body.region.regionName,
+          req.body.region.champion,
+          id,
+          true
+        );
       }
-    );
-    res.send(result);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+
+      const updateRes = await session.run(
+        `MATCH (n:Trainer {_id: $_id}) SET n = {username : $username, email: $email, _id: $_id} RETURN n`,
+        {
+          username: result.username,
+          email: result.email,
+          _id: id,
+        }
+      );
+      res.send(result);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
   }
-});
+);
 
 //Register Trainer
 router.post("/", async (req, res, next) => {
@@ -86,7 +99,7 @@ router.post("/", async (req, res, next) => {
   try {
     const registerTrainer = await trainer.save();
     const accessToken = jwt.sign(
-      { email:trainer.email, id:trainer.id, username:trainer.username },
+      { email: trainer.email, id: trainer.id, username: trainer.username },
       process.env.ACCESS_TOKEN_SECRET
     );
     const result = await session.run(
@@ -168,7 +181,11 @@ router.post("/Login", async (req, res, next) => {
       bcrypt.compare(password, trainer.password).then(function (result) {
         if (result == true) {
           const accessToken = jwt.sign(
-            { email:trainer.email, id:trainer.id, username:trainer.username },
+            {
+              email: trainer.email,
+              id: trainer.id,
+              username: trainer.username,
+            },
             process.env.ACCESS_TOKEN_SECRET
           );
           res.status(200).json({ accessToken: accessToken });
@@ -183,115 +200,127 @@ router.post("/Login", async (req, res, next) => {
 });
 
 //Delete Trainer
-router.delete("/:id", authenticateToken.authenticateToken, async (req, res, next) => {
-  try {
-    const id = req.params.id;
-    const result = await TrainerModel.findByIdAndDelete(id);
-    const deleteRes = await session.run(
-      `MATCH (n:Trainer {_id: $_id}) DELETE n`,
-      {
-        _id: id,
-      }
-    );
-    res.status(200).json(result);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-//Accept friendRequest
-router.patch("/:id/Request", authenticateToken.authenticateToken, async (req, res, next) => {
-  try {
-    const id = req.params.id;
-    const options = { new: true };
-    const idFriend = req.body.fiendList.fiendId;
-    const trainer = await TrainerModel.findById(id);
-    const friendRequest = await TrainerModel.findById(idFriend);
-    const friends = friendRequest.fiendList.toJSON();
-    if (friends && Object.keys(friends).length === 0) {
-    } else {
-      for (let friend of friends) {
-        if (friend.fiendId == id) {
-          return res
-            .status(400)
-            .json({ message: "U were already friends" })
-            .end();
-        }
-      }
-    }
-
-    if (trainer && friendRequest) {
-      const result = await TrainerModel.findOneAndUpdate(
-        { _id: id },
-        {
-          $push: {
-            fiendList: {
-              fiendId: idFriend,
-              username: friendRequest.username,
-            },
-          },
-        }
-      );
-      const friendSave = await TrainerModel.findOneAndUpdate(
-        { _id: idFriend },
-        {
-          $push: {
-            fiendList: {
-              fiendId: id,
-              username: trainer.username,
-            },
-          },
-        }
-      );
-      const friendship = await session.run(
-        `MATCH (a:Trainer {_id: $_id_a}) MATCH (b:Trainer {_id: $_id_b}) CREATE (a)-[relation:FRIENDS_WITH]->(b)`,
-        {
-          _id_a: trainer.id,
-          _id_b: friendRequest.id,
-        }
-      );
-      return res
-        .status(200)
-        .json({ Trainer: result, Friend: friendSave })
-        .end();
-    } else {
-      return res.status(400).json({ message: "No Trainers found :(" }).end();
-    }
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-//Trainer can see friends of friends
-router.get("/:id/FriendsOfFriends", authenticateToken.authenticateToken, async (req, res) => {
-  try {
-    const id = req.params.id;
-    var ids = [];
-    const friendOfFriend = await session
-      .run(
-        `MATCH (n:Trainer {_id: $_id}) MATCH  (n)-[:FRIENDS_WITH*2]-(m) WHERE NOT (n)-[:FRIENDS_WITH]-(m) RETURN m`,
+router.delete(
+  "/:id",
+  authenticateToken.authenticateToken,
+  async (req, res, next) => {
+    try {
+      const id = req.params.id;
+      const result = await TrainerModel.findByIdAndDelete(id);
+      const deleteRes = await session.run(
+        `MATCH (n:Trainer {_id: $_id}) DELETE n`,
         {
           _id: id,
         }
-      )
-      .then(function (result) {
-        result.records.forEach(function (record) {
-          ids.push(record._fields[0].properties._id);
-        });
-        return ids;
-      })
-      .then((ids) => {
-        TrainerModel.find({ _id: { $in: ids } }).then((trainersFriends) => {
-          res.status(200).json(trainersFriends);
-        });
-      })
-      .catch((error) => {
-        res.status(400).json(error);
-      });
-    // return res.status(200).json({friendsOfFriends: friendOfFriend}).end()
-  } catch (error) {
-    return res.status(400).json({ message: error.message }).end();
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
   }
-});
+);
+
+//Accept friendRequest
+router.patch(
+  "/:id/Request",
+  authenticateToken.authenticateToken,
+  async (req, res, next) => {
+    try {
+      const id = req.params.id;
+      const options = { new: true };
+      const idFriend = req.body.fiendList.fiendId;
+      const trainer = await TrainerModel.findById(id);
+      const friendRequest = await TrainerModel.findById(idFriend);
+      const friends = friendRequest.fiendList.toJSON();
+      if (friends && Object.keys(friends).length === 0) {
+      } else {
+        for (let friend of friends) {
+          if (friend.fiendId == id) {
+            return res
+              .status(400)
+              .json({ message: "U were already friends" })
+              .end();
+          }
+        }
+      }
+
+      if (trainer && friendRequest) {
+        const result = await TrainerModel.findOneAndUpdate(
+          { _id: id },
+          {
+            $push: {
+              fiendList: {
+                fiendId: idFriend,
+                username: friendRequest.username,
+              },
+            },
+          }
+        );
+        const friendSave = await TrainerModel.findOneAndUpdate(
+          { _id: idFriend },
+          {
+            $push: {
+              fiendList: {
+                fiendId: id,
+                username: trainer.username,
+              },
+            },
+          }
+        );
+        const friendship = await session.run(
+          `MATCH (a:Trainer {_id: $_id_a}) MATCH (b:Trainer {_id: $_id_b}) CREATE (a)-[relation:FRIENDS_WITH]->(b)`,
+          {
+            _id_a: trainer.id,
+            _id_b: friendRequest.id,
+          }
+        );
+        return res
+          .status(200)
+          .json({ Trainer: result, Friend: friendSave })
+          .end();
+      } else {
+        return res.status(400).json({ message: "No Trainers found :(" }).end();
+      }
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+);
+
+//Trainer can see friends of friends
+router.get(
+  "/:id/FriendsOfFriends",
+  authenticateToken.authenticateToken,
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+      var ids = [];
+      const friendOfFriend = await session
+        .run(
+          `MATCH (n:Trainer {_id: $_id}) MATCH  (n)-[:FRIENDS_WITH*2]-(m) WHERE NOT (n)-[:FRIENDS_WITH]-(m) RETURN m`,
+          {
+            _id: id,
+          }
+        )
+        .then(function (result) {
+          result.records.forEach(function (record) {
+            ids.push(record._fields[0].properties._id);
+          });
+          return ids;
+        })
+        .then((ids) => {
+          TrainerModel.find({ _id: { $in: ids } }).then((trainersFriends) => {
+            res.status(200).json(trainersFriends);
+          });
+        })
+        .catch((error) => {
+          res.status(400).json(error);
+        });
+      // return res.status(200).json({friendsOfFriends: friendOfFriend}).end()
+    } catch (error) {
+      return res.status(400).json({ message: error.message }).end();
+    }
+  }
+);
 
 module.exports = router;
