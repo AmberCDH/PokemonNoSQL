@@ -28,13 +28,17 @@ router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
 router.get(
   "/:id",
   authenticateToken.authenticateToken,
-  async (req, res, next) => {
+  async (req, res) => {
     try {
       const authHeader = req.headers["authorization"];
       const token = authHeader && authHeader.split(" ")[1];
-      if (token == null) return res.status(401).json({ message: "authorization missing" });
+      if (token == null){
+        return res.status(401).json({ message: "authorization missing" });
+      }        
       var idTrainer = await authenticateToken.decodeToken(token);
-      if(idTrainer == null || req.params.id != idTrainer) return res.status(401).json({message: "permission denied >_<"})
+      if (idTrainer == null || req.params.id != idTrainer){
+        return res.status(401).json({ message: "Not authorized >_<" });
+      }  
       const trainerById = await TrainerModel.findById(req.params.id);
       res.json(trainerById);
     } catch (error) {
@@ -47,8 +51,17 @@ router.get(
 router.patch(
   "/:id",
   authenticateToken.authenticateToken,
-  async (req, res, next) => {
+  async (req, res) => {
     try {
+      const authHeader = req.headers["authorization"];
+      const token = authHeader && authHeader.split(" ")[1];
+      if (token == null){
+        return res.status(401).json({ message: "authorization missing" });
+      }        
+      var idTrainer = await authenticateToken.decodeToken(token);
+      if (idTrainer == null || req.params.id != idTrainer){
+        return res.status(401).json({ message: "Not authorized >_<" });
+      }
       const id = req.params.id;
       const updatedTrainer = req.body;
       const options = { new: true };
@@ -84,7 +97,7 @@ router.patch(
 );
 
 //Register Trainer
-router.post("/", async (req, res, next) => {
+router.post("/", async (req, res) => {
   const trainer = new TrainerModel({
     username: req.body.username,
     password: await bcrypt.hash(req.body.password, 10),
@@ -163,7 +176,7 @@ async function checkAndCreateRegion(regionName, champion, idTrainer, bool) {
 }
 
 //Login Trainer
-router.post("/Login", async (req, res, next) => {
+router.post("/Login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     res.status(400).json({
@@ -203,12 +216,21 @@ router.post("/Login", async (req, res, next) => {
 router.delete(
   "/:id",
   authenticateToken.authenticateToken,
-  async (req, res, next) => {
+  async (req, res) => {
     try {
+      const authHeader = req.headers["authorization"];
+      const token = authHeader && authHeader.split(" ")[1];
+      if (token == null){
+        return res.status(401).json({ message: "authorization missing" });
+      }        
+      var idTrainer = await authenticateToken.decodeToken(token);
+      if (idTrainer == null || req.params.id != idTrainer){
+        return res.status(401).json({ message: "Not authorized >_<" });
+      }
       const id = req.params.id;
       const result = await TrainerModel.findByIdAndDelete(id);
       const deleteRes = await session.run(
-        `MATCH (n:Trainer {_id: $_id}) DELETE n`,
+        `MATCH (n:Trainer {_id: $_id}) DETACH DELETE n`,
         {
           _id: id,
         }
@@ -224,7 +246,7 @@ router.delete(
 router.patch(
   "/:id/Request",
   authenticateToken.authenticateToken,
-  async (req, res, next) => {
+  async (req, res) => {
     try {
       const id = req.params.id;
       const options = { new: true };
