@@ -30,6 +30,10 @@ const pokemonSchema = new mongoose.Schema({
   stars: {
     type: Number,
   },
-})
+  trainerId: {
+    type: ObjectId,
+    ref: "Trainer",
+  },
+});
 
-module.exports = mongoose.model('Pokemon', pokemonSchema)
+module.exports = mongoose.model("Pokemon", pokemonSchema);
