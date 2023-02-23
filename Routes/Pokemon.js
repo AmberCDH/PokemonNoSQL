@@ -4,17 +4,10 @@ const PokemonModel = require("../Models/Pokemon");
 
 const router = express.Router();
 
-//Get All Pokemon by Trainer
+//Get All Pokemon
 router.get("/", authenticateToken.authenticateToken, async (req, res) => {
   try {
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
-    if (token == null) {
-      return res.status(401).json({ message: "authorization missing" });
-    }
-    var idTrainer = await authenticateToken.decodeToken(token);
-
-    const pokemon = await PokemonModel.find({ trainerId: idTrainer });
+    const pokemon = await PokemonModel.find();
     res.status(200).json(pokemon);
   } catch (error) {
     res.status(500).json({ message: error.message });

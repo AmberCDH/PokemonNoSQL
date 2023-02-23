@@ -19,5 +19,9 @@ const itemSchema = new mongoose.Schema({
     required: true,
     type: Number,
   },
+  trainerId: {
+    type: ObjectId,
+    ref: "Trainer",
+  },
 });
 module.exports = mongoose.model("Item", itemSchema);
