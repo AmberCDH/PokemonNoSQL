@@ -99,8 +99,8 @@ router.patch("/:id", authenticateToken.authenticateToken, async (req, res) => {
         `MATCH (n:Item {_id: $_id}) SET n = {name: $name, amount:$amount, _id:$_id} RETURN n`,
         {
           _id:id,
-          name:itemById.name,
-          amount:itemById.amount
+          name:result.name,
+          amount:result.amount
         }
       )
       res.send(result);

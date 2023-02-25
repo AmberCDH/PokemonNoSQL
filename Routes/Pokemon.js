@@ -1,8 +1,14 @@
 const express = require("express");
 const authenticateToken = require("../TokenService/Auth");
 const PokemonModel = require("../Models/Pokemon");
+const neo4j = require("neo4j-driver");
 
 const router = express.Router();
+const driver = neo4j.driver(
+  process.env.NEO4J_URI,
+  neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
+);
+const session = driver.session();
 
 //Get All Pokemon
 router.get("/", authenticateToken.authenticateToken, async (req, res) => {
@@ -50,6 +56,21 @@ router.post("/", authenticateToken.authenticateToken, async (req, res) => {
   });
   try {
     const pokemonSave = await pokemon.save();
+    const result = await session.run(
+      `CREATE (n:Pokemon {_id: $_id, name:$name, stars:$stars})`,
+      {
+        _id:pokemonSave.id,
+        name:pokemonSave.name,
+        stars:pokemonSave.stars
+      }
+    )
+    const createRelationship = await session.run(
+      `MATCH (a:Trainer{_id: $_id_trainer}) MATCH (b:Pokemon {_id: $_id_pokemon}) CREATE (a)-[relationship:OWNS]->(b)`,
+      {
+        _id_trainer:idTrainer,
+        _id_pokemon:pokemonSave.id
+      }
+    )
     res.status(200).json({ Pokemon: pokemonSave });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -78,6 +99,14 @@ router.patch("/:id", authenticateToken.authenticateToken, async (req, res) => {
         updatedPokemon,
         options
       );
+      const updatePokemon = await session.run(
+        `MATCH (n:Pokemon {_id: $_id}) SET n = {_id: $_id, name:$name, stars:$stars} RETURN n`,
+        {
+          _id:id,
+          name:result.name,
+          stars:result.stars
+        }
+      )
       res.send(result);
     } else {
       return res.status(401).json({ message: "Not authorized >_<" });
@@ -106,6 +135,12 @@ router.delete(
 
       if (pokemonById.trainerId == idTrainer) {
         const result = await PokemonModel.findByIdAndDelete(id);
+        const pokemonDelete = await session.run(
+          `MATCH (n:Pokemon {_id:$_id}) DETACH DELETE n`,
+          {
+            _id:id
+          }
+        )
         res.status(200).json({deleted:result});
       } else {
         return res.status(401).json({ message: "Not authorized >_<" });
