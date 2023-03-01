@@ -17,7 +17,7 @@ router.post("/", authenticateToken.authenticateToken, async (req, res) => {
     const request = await friendRequest.save();
     res.status(200).json(request);
   } else {
-    res.status(400).json({ message: "No reciever/sender found" });
+    res.status(400).json({ message: "No receiver/sender found" });
   }
 });
 

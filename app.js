@@ -5,6 +5,7 @@ const PokemonRoute = require("./Routes/Pokemon");
 const ItemRoute = require("./Routes/Item");
 const RequestFriendshipRoute = require("./Routes/RequestFriendship");
 const TradeRoute = require("./Routes/RequestTrade")
+const TradeRequestRoute = require("./Routes/Trade")
 
 const neo4j = require("neo4j-driver");
 const http = require("http");
@@ -12,7 +13,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const mongoString = process.env.DATABASE_URL;
 const port = process.env.PORT;
-
+mongoose.set('strictQuery', false);
 const driver = neo4j.driver(
   process.env.NEO4J_URI,
   neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
@@ -49,6 +50,7 @@ app.use("/Pokemon", PokemonRoute);
 app.use("/Trainer", TrainerRoute);
 app.use("/Request", RequestFriendshipRoute);
 app.use("/Trade", TradeRoute)
+app.use("/TradeRequest", TradeRequestRoute)
 app.use("/", function (req, res) {
   res.send("NoSQL pokemon API works");
 });
