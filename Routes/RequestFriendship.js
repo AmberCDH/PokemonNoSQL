@@ -1,10 +1,9 @@
 const express = require("express");
-const authenticateToken = require("../TokenService/Auth")
+const authenticateToken = require("../TokenService/Auth");
 const RequestModel = require("../Models/RequestFriendship");
 const TrainerModel = require("../Models/Trainer");
 
 const router = express.Router();
-
 
 router.post("/", authenticateToken.authenticateToken, async (req, res) => {
   const receiver = await TrainerModel.findById(req.body.receiver);
@@ -23,16 +22,15 @@ router.post("/", authenticateToken.authenticateToken, async (req, res) => {
 
 router.get("/:id", authenticateToken.authenticateToken, async (req, res) => {
   const receiver = await TrainerModel.findById(req.params.id);
-  if(receiver){
-    const friendRequests = await RequestModel.find({receiver: receiver})
-    res.status(200).json(friendRequests)
-  }else {
-    res.status(400).json({message: "User was not found"})
+  if (receiver) {
+    const friendRequests = await RequestModel.find({ receiver: receiver });
+    res.status(200).json(friendRequests);
+  } else {
+    res.status(400).json({ message: "User was not found" });
   }
-
 });
 
-router.delete("/:id", authenticateToken.authenticateToken, async (req, res)=> {
+router.delete("/:id", authenticateToken.authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
     const deleteRequest = await RequestModel.findByIdAndDelete(id);
@@ -40,6 +38,6 @@ router.delete("/:id", authenticateToken.authenticateToken, async (req, res)=> {
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
-})
+});
 
 module.exports = router;

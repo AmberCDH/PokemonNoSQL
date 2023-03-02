@@ -24,76 +24,68 @@ router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
 });
 
 //Get Trainer
-router.get(
-  "/:id",
-  authenticateToken.authenticateToken,
-  async (req, res) => {
-    try {
-      const authHeader = req.headers["authorization"];
-      const token = authHeader && authHeader.split(" ")[1];
-      if (token == null){
-        return res.status(401).json({ message: "authorization missing" });
-      }        
-      var idTrainer = await authenticateToken.decodeToken(token);
-      if (idTrainer == null || req.params.id != idTrainer){
-        return res.status(401).json({ message: "Not authorized >_<" });
-      }  
-      const trainerById = await TrainerModel.findById(req.params.id);
-      res.json(trainerById);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+router.get("/:id", authenticateToken.authenticateToken, async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (token == null) {
+      return res.status(401).json({ message: "authorization missing" });
     }
+    var idTrainer = await authenticateToken.decodeToken(token);
+    if (idTrainer == null || req.params.id != idTrainer) {
+      return res.status(401).json({ message: "Not authorized >_<" });
+    }
+    const trainerById = await TrainerModel.findById(req.params.id);
+    res.json(trainerById);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-);
+});
 
 //Update Trainer
-router.patch(
-  "/:id",
-  authenticateToken.authenticateToken,
-  async (req, res) => {
-    try {
-      const authHeader = req.headers["authorization"];
-      const token = authHeader && authHeader.split(" ")[1];
-      if (token == null){
-        return res.status(401).json({ message: "authorization missing" });
-      }        
-      var idTrainer = await authenticateToken.decodeToken(token);
-      if (idTrainer == null || req.params.id != idTrainer){
-        return res.status(401).json({ message: "Not authorized >_<" });
-      }
-      const id = req.params.id;
-      const updatedTrainer = req.body;
-      const options = { new: true };
-
-      const result = await TrainerModel.findByIdAndUpdate(
-        id,
-        updatedTrainer,
-        options
-      );
-
-      if (updatedTrainer.region.regionName) {
-        await checkAndCreateRegion(
-          req.body.region.regionName,
-          req.body.region.champion,
-          id,
-          true
-        );
-      }
-
-      const updateRes = await session.run(
-        `MATCH (n:Trainer {_id: $_id}) SET n = {username : $username, email: $email, _id: $_id} RETURN n`,
-        {
-          username: result.username,
-          email: result.email,
-          _id: id,
-        }
-      );
-      res.send(result);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
+router.patch("/:id", authenticateToken.authenticateToken, async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (token == null) {
+      return res.status(401).json({ message: "authorization missing" });
     }
+    var idTrainer = await authenticateToken.decodeToken(token);
+    if (idTrainer == null || req.params.id != idTrainer) {
+      return res.status(401).json({ message: "Not authorized >_<" });
+    }
+    const id = req.params.id;
+    const updatedTrainer = req.body;
+    const options = { new: true };
+
+    const result = await TrainerModel.findByIdAndUpdate(
+      id,
+      updatedTrainer,
+      options
+    );
+
+    if (updatedTrainer.region.regionName) {
+      await checkAndCreateRegion(
+        req.body.region.regionName,
+        req.body.region.champion,
+        id,
+        true
+      );
+    }
+
+    const updateRes = await session.run(
+      `MATCH (n:Trainer {_id: $_id}) SET n = {username : $username, email: $email, _id: $_id} RETURN n`,
+      {
+        username: result.username,
+        email: result.email,
+        _id: id,
+      }
+    );
+    res.send(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
-);
+});
 
 //Register Trainer
 router.post("/", async (req, res) => {
@@ -212,34 +204,30 @@ router.post("/Login", async (req, res) => {
 });
 
 //Delete Trainer
-router.delete(
-  "/:id",
-  authenticateToken.authenticateToken,
-  async (req, res) => {
-    try {
-      const authHeader = req.headers["authorization"];
-      const token = authHeader && authHeader.split(" ")[1];
-      if (token == null){
-        return res.status(401).json({ message: "authorization missing" });
-      }        
-      var idTrainer = await authenticateToken.decodeToken(token);
-      if (idTrainer == null || req.params.id != idTrainer){
-        return res.status(401).json({ message: "Not authorized >_<" });
-      }
-      const id = req.params.id;
-      const result = await TrainerModel.findByIdAndDelete(id);
-      const deleteRes = await session.run(
-        `MATCH (n:Trainer {_id: $_id}) DETACH DELETE n`,
-        {
-          _id: id,
-        }
-      );
-      res.status(200).json(result);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
+router.delete("/:id", authenticateToken.authenticateToken, async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (token == null) {
+      return res.status(401).json({ message: "authorization missing" });
     }
+    var idTrainer = await authenticateToken.decodeToken(token);
+    if (idTrainer == null || req.params.id != idTrainer) {
+      return res.status(401).json({ message: "Not authorized >_<" });
+    }
+    const id = req.params.id;
+    const result = await TrainerModel.findByIdAndDelete(id);
+    const deleteRes = await session.run(
+      `MATCH (n:Trainer {_id: $_id}) DETACH DELETE n`,
+      {
+        _id: id,
+      }
+    );
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
-);
+});
 
 //Accept friendRequest
 router.patch(

@@ -5,7 +5,7 @@ const RequestTradeModel = require("../Models/RequestTrade");
 const PokemonModel = require("../Models/Pokemon");
 const ItemModel = require("../Models/Items");
 const neo4j = require("neo4j-driver");
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const router = express.Router();
 const driver = neo4j.driver(
@@ -237,8 +237,8 @@ router.delete(
         );
         const deleteWantReq = await session.run(
           `MATCH (a:Trainer)-[r:WANTS]->(b:Pokemon {_id:$_id}) DELETE r`,
-          {_id:pokemon.id}
-        )
+          { _id: pokemon.id }
+        );
         const deleterOP = await session.run(
           `MATCH (a:Trainer {_id:$_id_trainer})-[r:OWNS]->(b:Pokemon {_id:$_id_pokemon}) DELETE r`,
           {
@@ -274,8 +274,8 @@ router.delete(
         );
         const deleteWantReq = await session.run(
           `MATCH (a:Trainer)-[r:WANTS]->(b:Item {_id:$_id}) DELETE r`,
-          {_id:item.id}
-        )
+          { _id: item.id }
+        );
         const deleteOI = await session.run(
           `MATCH (a:Trainer {_id:$_id_trainer})-[r:OWNS]->(b:Item {_id:$_id_item}) DELETE r`,
           {

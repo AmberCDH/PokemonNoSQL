@@ -59,18 +59,18 @@ router.post("/", authenticateToken.authenticateToken, async (req, res) => {
     const result = await session.run(
       `CREATE (n:Pokemon {_id: $_id, name:$name, stars:$stars})`,
       {
-        _id:pokemonSave.id,
-        name:pokemonSave.name,
-        stars:pokemonSave.stars
+        _id: pokemonSave.id,
+        name: pokemonSave.name,
+        stars: pokemonSave.stars,
       }
-    )
+    );
     const createRelationship = await session.run(
       `MATCH (a:Trainer{_id: $_id_trainer}) MATCH (b:Pokemon {_id: $_id_pokemon}) CREATE (a)-[relationship:OWNS]->(b)`,
       {
-        _id_trainer:idTrainer,
-        _id_pokemon:pokemonSave.id
+        _id_trainer: idTrainer,
+        _id_pokemon: pokemonSave.id,
       }
-    )
+    );
     res.status(200).json({ Pokemon: pokemonSave });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -102,11 +102,11 @@ router.patch("/:id", authenticateToken.authenticateToken, async (req, res) => {
       const updatePokemon = await session.run(
         `MATCH (n:Pokemon {_id: $_id}) SET n = {_id: $_id, name:$name, stars:$stars} RETURN n`,
         {
-          _id:id,
-          name:result.name,
-          stars:result.stars
+          _id: id,
+          name: result.name,
+          stars: result.stars,
         }
-      )
+      );
       res.send(result);
     } else {
       return res.status(401).json({ message: "Not authorized >_<" });
@@ -117,38 +117,34 @@ router.patch("/:id", authenticateToken.authenticateToken, async (req, res) => {
 });
 
 //Delete pokemon
-router.delete(
-  "/:id",
-  authenticateToken.authenticateToken,
-  async (req, res) => {
-    try {
-      const authHeader = req.headers["authorization"];
-      const token = authHeader && authHeader.split(" ")[1];
-      if (token == null) {
-        return res.status(401).json({ message: "authorization missing" });
-      }
-      var idTrainer = await authenticateToken.decodeToken(token);
-
-      const id = req.params.id;
-
-      const pokemonById = await PokemonModel.findById(id);
-
-      if (pokemonById.trainerId == idTrainer) {
-        const result = await PokemonModel.findByIdAndDelete(id);
-        const pokemonDelete = await session.run(
-          `MATCH (n:Pokemon {_id:$_id}) DETACH DELETE n`,
-          {
-            _id:id
-          }
-        )
-        res.status(200).json({deleted:result});
-      } else {
-        return res.status(401).json({ message: "Not authorized >_<" });
-      }
-    } catch (error) {
-      res.status(400).json({ message: error.message });
+router.delete("/:id", authenticateToken.authenticateToken, async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (token == null) {
+      return res.status(401).json({ message: "authorization missing" });
     }
+    var idTrainer = await authenticateToken.decodeToken(token);
+
+    const id = req.params.id;
+
+    const pokemonById = await PokemonModel.findById(id);
+
+    if (pokemonById.trainerId == idTrainer) {
+      const result = await PokemonModel.findByIdAndDelete(id);
+      const pokemonDelete = await session.run(
+        `MATCH (n:Pokemon {_id:$_id}) DETACH DELETE n`,
+        {
+          _id: id,
+        }
+      );
+      res.status(200).json({ deleted: result });
+    } else {
+      return res.status(401).json({ message: "Not authorized >_<" });
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
-);
+});
 
 module.exports = router;
