@@ -6,6 +6,7 @@ const ItemRoute = require("./Routes/Item");
 const RequestFriendshipRoute = require("./Routes/RequestFriendship");
 const TradeRoute = require("./Routes/RequestTrade")
 const TradeRequestRoute = require("./Routes/Trade")
+const RegionRoute = require("./Routes/Region")
 
 const neo4j = require("neo4j-driver");
 const http = require("http");
@@ -51,6 +52,7 @@ app.use("/Trainer", TrainerRoute);
 app.use("/Request", RequestFriendshipRoute);
 app.use("/Trade", TradeRoute)
 app.use("/TradeRequest", TradeRequestRoute)
+app.use("/Region", RegionRoute)
 app.use("/", function (req, res) {
   res.send("NoSQL pokemon API works");
 });

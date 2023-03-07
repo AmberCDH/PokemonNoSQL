@@ -26,12 +26,6 @@ router.get("/", authenticateToken.authenticateToken, async (req, res) => {
     const tradeRequests = await RequestTradeModel.find({
       receiver: trainerIdTrade,
     });
-    // let listOfItems = tradeRequests.map(a => a.itemSender)
-    // let listOfPokemons = tradeRequests.map(a => a.pokemonSender)
-    // console.log(listOfPokemons)
-    // console.log(listOfItems)
-    // const allItems = await ItemModel.find({id:{$in:listOfItems}})
-    // const allPokemons = await PokemonModel.find({id:{$in:listOfPokemons}})
     res.status(200).json({ tradeRequests: tradeRequests });
   } catch (error) {
     res.status(500).json({ message: error.message });
