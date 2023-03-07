@@ -160,15 +160,167 @@ router.get(
       } else if (itemResults.length <= 0 && pokemonResults.length <= 0) {
         return res.status(400).json({ message: "Bad request!" }).end();
       } else {
+        res.status(500).json({ message: error.message });
         return res.status(400).json({ message: "Bad request" }).end();
       }
+    } catch (error) {}
+  }
+);
+
+//Accept request
+router.patch(
+  "/:idRequest/Trade",
+  authenticateToken.authenticateToken,
+  async (req, res) => {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (token == null) {
+      return res.status(401).json({ message: "authorization missing" });
+    }
+    const trainerIdTrade = await authenticateToken.decodeToken(token);
+    try {
+      const tradeRequest = await RequestTradeModel.findOne({
+        _id: req.params.idRequest,
+      });
+      if (trainerIdTrade != tradeRequest.receiver) {
+        return res.status(400).json({ message: "you do not own this request" });
+      }
+
+      var pokemonOrItemSender;
+      var senderId;
+      var pokemonOrItemReceiver;
+      var receiverId;
+      const options = { new: true };
+
+      senderId = tradeRequest.sender;
+      receiverId = tradeRequest.receiver;
+
+      //pokemon or item sender
+      if (tradeRequest.pokemonSender != null) {
+        pokemonOrItemSender = tradeRequest.pokemonSender;
+        await PokemonModel.findByIdAndUpdate(
+          pokemonOrItemSender,
+          { trainerId: tradeRequest.receiver },
+          options
+        );
+        await RequestTradeModel.deleteMany({
+          sender: senderId,
+          pokemonSender: pokemonOrItemSender,
+        });
+      } else if (tradeRequest.itemSender != null) {
+        pokemonOrItemSender = tradeRequest.itemSender;
+        await ItemModel.findByIdAndUpdate(
+          pokemonOrItemSender,
+          { trainerId: tradeRequest.receiver },
+          options
+        );
+        await RequestTradeModel.deleteMany({
+          sender: senderId,
+          itemSender: pokemonOrItemSender,
+        });
+      }
+      //pokemon or item receiver
+      if (tradeRequest.pokemonReceiver != null) {
+        pokemonOrItemReceiver = tradeRequest.pokemonReceiver;
+        await PokemonModel.findByIdAndUpdate(
+          pokemonOrItemReceiver,
+          { trainerId: tradeRequest.sender },
+          options
+        );
+        await RequestTradeModel.deleteMany({
+          receiver: receiverId,
+          pokemonReceiver: pokemonOrItemReceiver,
+        });
+      } else if (tradeRequest.itemReceiver != null) {
+        pokemonOrItemReceiver = tradeRequest.itemReceiver;
+        await ItemModel.findByIdAndUpdate(
+          pokemonOrItemReceiver,
+          { trainerId: tradeRequest.sender },
+          options
+        );
+        await RequestTradeModel.deleteMany({
+          receiver: receiverId,
+          itemReceiver: pokemonOrItemReceiver,
+        });
+      }
+
+      const deletedRReceiver = await session.run(
+        `MATCH (n {_id:$_id})<-[r]-() DELETE r`,
+        {
+          _id: pokemonOrItemReceiver.toString(),
+        }
+      );
+
+      const deletedRSender = await session.run(
+        `MATCH (n {_id:$_id})<-[r]-() DELETE r`,
+        {
+          _id: pokemonOrItemSender.toString(),
+        }
+      );
+
+      //Create relationship owns
+      const createRSender = await session.run(
+        `MATCH (a:Trainer {_id:$id_trainer}) MATCH (b {_id:$id}) CREATE (a)-[r:OWNS]->(b) RETURN r`,
+        {
+          id_trainer: senderId.toString(),
+          id: pokemonOrItemReceiver.toString(),
+        }
+      );
+        
+      const createRReceiver = await session.run(
+        `MATCH (a:Trainer {_id:$id_trainer}) MATCH (b {_id:$id}) CREATE (a)-[r:OWNS]->(b) RETURN r`,
+        {
+          id_trainer: receiverId.toString(),
+          id: pokemonOrItemSender.toString(),
+        }
+      );
+
+      res.status(200).json({ requestAccepted: tradeRequest });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
   }
 );
-
-//Accept request (Alle request moeten verwijderd worden voor item/pokemon en alleen de eigenaar van de pokemon kan hem accepteren Pokemon/items worden verwisseld zowel in neo en mongo)
-//Decline request (1 request kan verwijderd worden en alleen de eigenaar van het item kan deze request verwijderen)
+//Decline request
+router.delete(
+  "/:idRequest/Trade",
+  authenticateToken.authenticateToken,
+  async (req, res) => {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+    if (token == null) {
+      return res.status(401).json({ message: "authorization missing" });
+    }
+    const trainerIdTrade = await authenticateToken.decodeToken(token);
+    try {
+      //Request moet verwijderd worden
+      const tradeRequest = await RequestTradeModel.findOne({receiver:trainerIdTrade, _id:req.params.idRequest})
+      const tradeRequests = await RequestTradeModel.deleteMany({receiver:trainerIdTrade, sender:tradeRequest.sender, itemSender:tradeRequest.itemSender, pokemonSender:tradeRequest.pokemonSender})
+      if (trainerIdTrade != tradeRequest.receiver) {
+        return res.status(400).json({ message: "you do not own this request" });
+      }
+      
+      //de want request moet verwijderd worden
+      var pokemonOrItemReceiver;
+      if (tradeRequest.pokemonReceiver != null) {
+        pokemonOrItemReceiver = tradeRequest.pokemonReceiver;
+      } else if (tradeRequest.itemReceiver != null) {
+        pokemonOrItemReceiver = tradeRequest.itemReceiver;
+      }
+      
+      var requestId = tradeRequest.sender
+      const deletedRReceiver = await session.run(
+        `MATCH (n {_id:$_id})<-[r]-(b:Trainer {_id:$trainerId}) DELETE r`,
+        {
+          _id: pokemonOrItemReceiver.toString(),
+          trainerId: requestId.toString()
+        }
+      );
+      res.status(200).json({ DeclinedRequest: tradeRequest });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
 
 module.exports = router;
