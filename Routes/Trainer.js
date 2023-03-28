@@ -17,6 +17,9 @@ const session = driver.session();
 router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const trainers = await TrainerModel.find();
+    if(trainers.length < 0){
+      res.status(200).json(trainers)
+    }
     res.status(200).json(trainers);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -170,17 +173,17 @@ async function checkAndCreateRegion(regionName, champion, idTrainer, bool) {
 router.post("/Login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    res.status(400).json({
-      message: "Username or Password not present",
-    });
+    return res.status(400).json({
+      message: "Email or Password not present",
+    }).end()
   }
   try {
     const trainer = await TrainerModel.findOne({ email: req.body.email });
     if (!trainer) {
-      res.status(401).json({
+      return res.status(401).json({
         message: "Login not successful",
         error: "User not found",
-      });
+      }).end()
     } else {
       bcrypt.compare(password, trainer.password).then(function (result) {
         if (result == true) {
@@ -192,9 +195,9 @@ router.post("/Login", async (req, res) => {
             },
             process.env.ACCESS_TOKEN_SECRET
           );
-          res.status(200).json({ accessToken: accessToken });
+          return res.status(200).json({ accessToken: accessToken }).end()
         } else {
-          res.status(400).json({ message: "Login not succesful" });
+          return res.status(400).json({ message: "Login not succesful" }).end()
         }
       });
     }

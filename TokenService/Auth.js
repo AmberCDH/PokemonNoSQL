@@ -6,7 +6,7 @@ function authenticateToken(req, res, next) {
   if (token == null)
     return res.status(401).json({ message: "authorization missing" });
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, trainer) => {
-    if (err) return res.status(403);
+    if (err) return new Error(res.status(403).json({message:"USER_ERROR"}))
     req.trainer = trainer;
     next();
   });

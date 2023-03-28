@@ -1,5 +1,4 @@
-require("dotenv").config();
-
+require('custom-env').env()
 const TrainerRoute = require("./Routes/Trainer");
 const PokemonRoute = require("./Routes/Pokemon");
 const ItemRoute = require("./Routes/Item");
@@ -60,3 +59,5 @@ const server = http.createServer(app);
 
 server.listen(port);
 console.debug("localhost:" + port + "/");
+
+module.exports = server
