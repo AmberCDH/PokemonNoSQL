@@ -7,7 +7,7 @@ let idItem = "6422df288c3dbe78ca8e0df4";
 const neo4j = require("neo4j-driver");
 const mongoose = require("mongoose");
 const request = require("supertest");
-const app = require("../app");
+const app = require("./mockApp");
 
 let addedItemId;
 describe("Item", () => {

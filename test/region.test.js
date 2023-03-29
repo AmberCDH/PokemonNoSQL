@@ -6,7 +6,7 @@ let token =
 const neo4j = require("neo4j-driver");
 const mongoose = require("mongoose");
 const request = require("supertest");
-const app = require("../app");
+const app = require("./mockApp");
 
 describe("Region", () => {
   let connection;

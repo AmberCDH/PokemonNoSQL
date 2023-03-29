@@ -82,7 +82,6 @@ router.post(
         trainers.push(record._fields[0].properties);
         id = record._fields[0].properties._id
       });
-      console.log(id + " ID :>");
       const getTrades = await session.run(
         `MATCH (a:Trainer{_id:$trainerId}) MATCH (a)-[:TRADES]->(c) RETURN c`,
         { trainerId: id }

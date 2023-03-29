@@ -10,7 +10,7 @@ let tokenTrainer;
 const neo4j = require("neo4j-driver");
 const mongoose = require("mongoose");
 const request = require("supertest");
-const app = require("../app");
+const app = require("./mockApp");
 
 describe("Trainer", () => {
   let connection;

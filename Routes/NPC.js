@@ -107,13 +107,48 @@ router.delete("/:id", authenticateToken.authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;
     const result = await NPCModel.findByIdAndDelete(id);
-    const itemToDelete = await session.run(
+    const NPCToDelete = await session.run(
       `MATCH (n:NPC {_id:$_id}) DETACH DELETE n`,
       {
         _id: id,
       }
     );
     res.status(200).json({ deleted: result });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+//Create relation between a NPC and region
+router.post("/:idNPC/Region/",authenticateToken.authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.idNPC;
+    const result = await NPCModel.findById(id);
+    
+    const regionName = req.body.regionName;
+
+    const obj = await session.run(
+      `MATCH (a:Region {regionName: $regionName})<-[r:EXISTS_IN]-(b:NPC {_id: $_id}) RETURN r`,
+      {
+        regionName: regionName,
+        _id:id
+      }
+    );
+    exists = obj.records.length;
+    if (exists == 0) {
+      const relation = await session.run(
+        `MATCH (a:Region {regionName: $regionName}) MATCH (b:NPC {_id: $_id}) CREATE (a)<-[r:EXISTS_IN]-(b)`,
+        {
+          regionName: regionName,
+          _id:id
+        }
+      );
+      return res.status(200).json({ Exists: "Relation is created" }).end()
+    } else {
+      return res.status(200).json({ Exists: "This relation already exists" }).end()
+    }
+
+    
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

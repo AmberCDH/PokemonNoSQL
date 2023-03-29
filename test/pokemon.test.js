@@ -7,7 +7,7 @@ let idPokemon = "6422dece8c3dbe78ca8e0df2";
 const neo4j = require("neo4j-driver");
 const mongoose = require("mongoose");
 const request = require("supertest");
-const app = require("../app");
+const app = require("./mockApp");
 
 let addedPokemonId;
 describe("Pokemon", () => {
@@ -93,7 +93,7 @@ describe("Pokemon", () => {
     });
   });
 
-  //-----Get item-----
+  //-----Get Pokemon-----
   describe("GET BY ID 'Pokemon/'", () => {
     it("Should get one Pokemon", async () => {
       const res = await request(app)
