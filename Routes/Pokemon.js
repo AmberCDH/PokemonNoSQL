@@ -14,7 +14,10 @@ const session = driver.session();
 router.get("/", authenticateToken.authenticateToken, async (req, res) => {
   try {
     const pokemon = await PokemonModel.find();
-    res.status(200).json(pokemon);
+    if (pokemon.length > 0) {
+      return res.status(200).json(pokemon).end();
+    }
+    return res.status(200).json({ message: "Pokemon do not exist yet" }).end();
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

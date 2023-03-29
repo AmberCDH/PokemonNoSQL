@@ -17,10 +17,10 @@ const session = driver.session();
 router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const trainers = await TrainerModel.find();
-    if(trainers.length < 0){
-      res.status(200).json(trainers)
+    if(trainers.length > 0){
+      return res.status(200).json(trainers).end()
     }
-    res.status(200).json(trainers);
+    return res.status(200).json({message: "Trainers do not exist yet"}).end()
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

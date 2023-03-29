@@ -14,7 +14,10 @@ const session = driver.session();
 router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
   try {
     const items = await itemModel.find();
-    res.status(200).json(items);
+    if (items.length > 0) {
+      return res.status(200).json(items).end();
+    }
+    return res.status(200).json({ message: "Items do not exist yet" }).end();
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -63,7 +66,7 @@ router.post("/", authenticateToken.authenticateToken, async (req, res) => {
         _id_item: itemSave.id,
       }
     );
-    res.status(200).json({ Pokemon: itemSave });
+    res.status(200).json({ item: itemSave });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
