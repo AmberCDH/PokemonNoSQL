@@ -41,7 +41,7 @@ router.get("/:id", authenticateToken.authenticateToken, async (req, res) => {
     const trainerById = await TrainerModel.findById(req.params.id);
     res.json(trainerById);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(400).json({ message: error.message });
   }
 });
 
@@ -197,7 +197,7 @@ router.post("/Login", async (req, res) => {
           );
           return res.status(200).json({ accessToken: accessToken }).end()
         } else {
-          return res.status(400).json({ message: "Login not succesful" }).end()
+          return res.status(400).json({ message: "Login not successful" }).end()
         }
       });
     }
@@ -212,11 +212,11 @@ router.delete("/:id", authenticateToken.authenticateToken, async (req, res) => {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
     if (token == null) {
-      return res.status(401).json({ message: "authorization missing" });
+      return res.status(401).json({ message: "authorization missing" }).end()
     }
     var idTrainer = await authenticateToken.decodeToken(token);
     if (idTrainer == null || req.params.id != idTrainer) {
-      return res.status(401).json({ message: "Not authorized >_<" });
+      return res.status(401).json({ message: "Not authorized >_<" }).end()
     }
     const id = req.params.id;
     const result = await TrainerModel.findByIdAndDelete(id);
@@ -226,7 +226,7 @@ router.delete("/:id", authenticateToken.authenticateToken, async (req, res) => {
         _id: id,
       }
     );
-    res.status(200).json(result);
+    return res.status(200).json(result).end()
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

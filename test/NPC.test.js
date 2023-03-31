@@ -1,8 +1,31 @@
 const { MongoClient } = require("mongodb");
 
-let token =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImRlbGxhQG1haWwuY29tIiwiaWQiOiI2NDA2NWY4Yzc1MTRhZmQ1YjcyMGNhMjciLCJ1c2VybmFtZSI6ImRlbGxhIiwiaWF0IjoxNjc5OTk3MjQ5fQ.WrvrH9KI9HYxEKs8JRgw6HEqjoOWsYMFJ4EZco5zPZU";
+let token;
 let idNPC = "642453e3380b50cdc2359faa";
+
+const tests = [
+  {
+    age: 21,
+    gender: "Female",
+    commentList: ["I'm hungry!"],
+    friendly: true,
+  },
+  {
+    name: "Test",
+    gender: "Female",
+    commentList: ["I'm hungry!"],
+    friendly: true,
+  },
+
+  {
+    name: "Test",
+    age: 21,
+    gender: "Female",
+    commentList: ["I'm hungry!"],
+  },
+];
+let wierdId = "1";
+let id = "6422df288c3dbe78ca8e0df4";
 
 const neo4j = require("neo4j-driver");
 const mongoose = require("mongoose");
@@ -28,6 +51,11 @@ describe("NPC", () => {
       neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
     );
     session = driver.session();
+    const result = await request(app)
+      .post("/Trainer/Login")
+      .send({ email: "della@mail.com", password: "Wachtwoord" })
+      .set("Content-Type", "application/json");
+    token = result.body.accessToken;
   });
   afterAll(async () => {
     const npcs = db.collection("npcs");
@@ -75,6 +103,20 @@ describe("NPC", () => {
     });
   });
 
+  //-----DOES NOT Create NPC-----
+  describe("POST 'NPC/'", () => {
+    for (let i = 0; i < tests.length; i++) {
+      it("should not insert a doc into NPC", async () => {
+        const res = await request(app)
+          .post("/NPC/")
+          .set("Authorization", "Bearer " + token)
+          .send(tests[i])
+          .set("Content-Type", "application/json");
+        expect(res.statusCode).toBe(400);
+      });
+    }
+  });
+
   //-----Get all NPC's-----
   describe("GET All 'NPC/'", () => {
     it("Should get all NPC", async () => {
@@ -97,6 +139,17 @@ describe("NPC", () => {
     });
   });
 
+  //-----DOES NOT Get NPC-----
+  describe("GET BY ID 'NPC/'", () => {
+    it("Should not get one NPC", async () => {
+      const res = await request(app)
+        .get("/NPC/" + wierdId.toString())
+        .set("Authorization", "Bearer " + token);
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toEqual("Could not find this NPC with id: " + wierdId)
+    });
+  });
+
   //-----Insert Comment-----
   describe("POST 'NPC/'", () => {
     it("should insert a comment into NPC commentList", async () => {
@@ -107,11 +160,33 @@ describe("NPC", () => {
       };
 
       const res = await request(app)
-        .post("/NPC/" + idNPC.toString())
+        .post("/NPC/" + idNPC.toString() + "/comment")
         .set("Authorization", "Bearer " + token)
         .send(mockNPC)
         .set("Content-Type", "application/json");
       expect(res.statusCode).toBe(200);
+      const insertedNPC = await npcs.findOne({
+        name: "Amber",
+      });
+      expect(insertedNPC.commentList).not.toContain(mockNPC.commentList);
+    });
+  });
+
+  //-----DOES NOT Insert Comment-----
+  describe("POST 'NPC/'", () => {
+    it("should not insert a comment into NPC commentList", async () => {
+      const npcs = db.collection("npcs");
+
+      const mockNPC = {
+        comment: "Help!",
+      };
+
+      const res = await request(app)
+        .post("/NPC/" + id.toString() + "/comment")
+        .set("Authorization", "Bearer " + token)
+        .send(mockNPC)
+        .set("Content-Type", "application/json");
+      expect(res.statusCode).toBe(400);
       const insertedNPC = await npcs.findOne({
         name: "Amber",
       });
@@ -158,6 +233,30 @@ describe("NPC", () => {
       expect(npc.age).not.toEqual(updatedBack.value.age);
     });
   });
+
+  //-----DOES NOT Update NPC-----
+  describe("UPDATE BY ID 'NPC/'", () => {
+    it("Should update one NPC", async () => {
+      const npcs = db.collection("npcs");
+      const npc = await npcs.findOne({
+        _id: mongoose.Types.ObjectId(idNPC),
+      });
+      const updateNPC = {
+        age: 500,
+      };
+      const res = await request(app)
+        .patch("/NPC/" + idNPC.toString())
+        .send(updateNPC)
+        .set("Content-Type", "application/json");
+      expect(res.statusCode).toBe(401);
+      expect(res.body.message).toEqual("authorization missing");
+      const updatedNPC = await npcs.findOne({
+        _id: mongoose.Types.ObjectId(idNPC),
+      });
+      expect(npc.age).toEqual(updatedNPC.age);
+    });
+  });
+
   //-----Delete NPC-----
   describe("DELETE 'NPC/'", () => {
     it("should delete a NPC", async () => {
@@ -170,7 +269,6 @@ describe("NPC", () => {
         commentList: ["I'm hungry!"],
         friendly: true,
       };
-
 
       const inserted = await request(app)
         .post("/NPC/")
@@ -186,10 +284,16 @@ describe("NPC", () => {
         .delete("/NPC/" + addedNPCId.toString())
         .set("Authorization", "Bearer " + token);
       expect(res.statusCode).toBe(200);
-
-
     });
   });
 
-  //-----Create relation between a NPC and region-----
+  //-----DOES NOT Delete NPC-----
+  describe("DELETE 'NPC/'", () => {
+    it("should not delete a NPC", async () => {
+      const res = await request(app)
+        .delete("/NPC/" + wierdId.toString())
+        .set("Authorization", "Bearer " + token);
+      expect(res.statusCode).toBe(400);
+    });
+  });
 });

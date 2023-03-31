@@ -1,14 +1,15 @@
 const { MongoClient } = require("mongodb");
 
 let token;
+
+let requestFriend 
+
 const neo4j = require("neo4j-driver");
-const mongoose = require("mongoose");
 const request = require("supertest");
 const app = require("./mockApp");
 
-describe("Region", () => {
+describe("RequestFriendship", () => {
   let connection;
-  let db;
   let session;
 
   beforeAll(async () => {
@@ -34,45 +35,34 @@ describe("Region", () => {
     await session.close();
     await connection.close();
   });
+  beforeEach(async () => {});
 
   require("dotenv").config();
 
-  //-----get all regions-----
-  describe("GET All 'Regions/'", () => {
-    it("Should get all Region", async () => {
+  //-----create friendshiprequest-----
+  describe("POST 'Request/'", () => {
+    it("Should post request", async () => {
+      const mockRequest = {
+        receiver: "64065f8c7514afd5b720ca27",
+        sender: "63ef7dd7ae1b615054ac301a",
+      };
+
       const res = await request(app)
-        .get("/Region/")
+        .post("/Request/")
+        .set("Authorization", "Bearer " + token)
+        .send(mockRequest)
+        .set("Content-Type", "application/json");
+      expect(res.statusCode).toBe(200);
+      requestFriend = res.body;
+    });
+  });
+
+  //-----delete one friendshiprequest-----
+  describe("DELETE 'Request/'", () => {
+    it("should delete a Request", async () => {
+      const res = await request(app)
+        .delete("/Request/" + requestFriend._id.toString())
         .set("Authorization", "Bearer " + token);
-      expect(res.statusCode).toBe(200);
-    });
-  });
-
-  //-----get specific region-----
-  describe("GET one 'Regions/'", () => {
-    it("Should get one Region", async () => {
-      const region = {
-        regionName: "Hoenn",
-      };
-      const res = await request(app)
-        .post("/Region/")
-        .set("Authorization", "Bearer " + token)
-        .send(region)
-        .set("Content-Type", "application/json");
-      expect(res.statusCode).toBe(200);
-    });
-  });
-
-  //-----Top trades of a region-----
-  describe("GET one 'Regions/'", () => {
-    it("Should get one Region", async () => {
-      const region = {
-        regionName: "Hoenn",
-      };
-      const res = await request(app)
-        .post("/Region/TopTrader")
-        .set("Authorization", "Bearer " + token)
-        .send(region)
-        .set("Content-Type", "application/json");
       expect(res.statusCode).toBe(200);
     });
   });

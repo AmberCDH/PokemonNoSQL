@@ -5,6 +5,7 @@ const TrainerModel = require("../Models/Trainer");
 
 const router = express.Router();
 
+//Create friendshiprequest
 router.post("/", authenticateToken.authenticateToken, async (req, res) => {
   const receiver = await TrainerModel.findById(req.body.receiver);
   const sender = await TrainerModel.findById(req.body.sender);
@@ -20,16 +21,18 @@ router.post("/", authenticateToken.authenticateToken, async (req, res) => {
   }
 });
 
-router.get("/:id", authenticateToken.authenticateToken, async (req, res) => {
-  const receiver = await TrainerModel.findById(req.params.id);
+//get one friendshiprequest
+router.get("/:idTrainer", authenticateToken.authenticateToken, async (req, res) => {
+  const receiver = await TrainerModel.findById(req.params.idTrainer);
   if (receiver) {
-    const friendRequests = await RequestModel.find({ receiver: receiver });
+    const friendRequests = await RequestModel.find({ receiver: receiver.id });
     res.status(200).json(friendRequests);
   } else {
     res.status(400).json({ message: "User was not found" });
   }
 });
 
+//delete one friendshiprequest
 router.delete("/:id", authenticateToken.authenticateToken, async (req, res) => {
   try {
     const id = req.params.id;

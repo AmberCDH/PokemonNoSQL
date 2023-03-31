@@ -19,7 +19,7 @@ router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
     }
     return res.status(200).json({ message: "Items do not exist yet" }).end();
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(400).json({ message: error.message });
   }
 });
 
@@ -29,7 +29,7 @@ router.get("/:id", authenticateToken.authenticateToken, async (req, res) => {
     const itemById = await itemModel.findById(req.params.id);
     res.json(itemById);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(400).json({ message: "Could not find this item with id: " + req.params.id });
   }
 });
 
@@ -111,7 +111,7 @@ router.patch("/:id", authenticateToken.authenticateToken, async (req, res) => {
   }
 });
 
-//Delete pokemon
+//Delete item
 router.delete("/:id", authenticateToken.authenticateToken, async (req, res) => {
   try {
     const authHeader = req.headers["authorization"];

@@ -30,7 +30,7 @@ router.get("/:id", authenticateToken.authenticateToken, async (req, res) => {
     const npcById = await NPCModel.findById(req.params.id);
     res.json(npcById);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(400).json({ message: "Could not find this NPC with id: " + req.params.id});
   }
 });
 

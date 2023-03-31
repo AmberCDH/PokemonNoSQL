@@ -1,13 +1,15 @@
 const { MongoClient } = require("mongodb");
 
-let token =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImRlbGxhQG1haWwuY29tIiwiaWQiOiI2NDA2NWY4Yzc1MTRhZmQ1YjcyMGNhMjciLCJ1c2VybmFtZSI6ImRlbGxhIiwiaWF0IjoxNjc5OTk3MjQ5fQ.WrvrH9KI9HYxEKs8JRgw6HEqjoOWsYMFJ4EZco5zPZU";
+let token;
 let idPokemon = "6422dece8c3dbe78ca8e0df2";
 
 const neo4j = require("neo4j-driver");
 const mongoose = require("mongoose");
 const request = require("supertest");
 const app = require("./mockApp");
+
+let wierdId = "1";
+let notYoursId = "63fde5a0eb804a98b3fcddb3";
 
 let addedPokemonId;
 describe("Pokemon", () => {
@@ -28,6 +30,11 @@ describe("Pokemon", () => {
       neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
     );
     session = driver.session();
+    const result = await request(app)
+      .post("/Trainer/Login")
+      .send({ email: "della@mail.com", password: "Wachtwoord" })
+      .set("Content-Type", "application/json");
+    token = result.body.accessToken;
   });
   afterAll(async () => {
     const pokemons = db.collection("pokemons");
@@ -47,6 +54,31 @@ describe("Pokemon", () => {
   });
 
   require("dotenv").config();
+
+  //-----Is not logged in-----
+  describe("POST 'Pokemon/'", () => {
+    it("should not be logged in", async () => {
+      const tests = {
+        gender: "Male",
+        stars: 2,
+        abilities: {
+          name: "Overgrow",
+        },
+        weaknesses: {
+          name: "Fire",
+        },
+        type: {
+          name: "Grass",
+        },
+      };
+      const res = await request(app)
+        .post("/Pokemon/")
+        .send(tests)
+        .set("Content-Type", "application/json");
+      expect(res.statusCode).toBe(401);
+      expect(res.body.message).toEqual("authorization missing");
+    });
+  });
 
   //-----Create Pokemon-----
   describe("POST 'Pokemon/'", () => {
@@ -82,6 +114,31 @@ describe("Pokemon", () => {
     });
   });
 
+  //-----DOES NOT Create Pokemon-----
+  describe("POST 'Pokemon/'", () => {
+    it("should not insert a doc into pokemons", async () => {
+      const tests = {
+        gender: "Male",
+        stars: 2,
+        abilities: {
+          name: "Overgrow",
+        },
+        weaknesses: {
+          name: "Fire",
+        },
+        type: {
+          name: "Grass",
+        },
+      };
+      const res = await request(app)
+        .post("/Pokemon/")
+        .set("Authorization", "Bearer " + token)
+        .send(tests)
+        .set("Content-Type", "application/json");
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
   //-----Get All Pokemons-----
   describe("GET All 'Pokemon/'", () => {
     it("Should get all Pokemon", async () => {
@@ -101,6 +158,19 @@ describe("Pokemon", () => {
         .set("Authorization", "Bearer " + token);
       expect(res.statusCode).toBe(200);
       expect(res.body.name.length).toBeGreaterThan(0);
+    });
+  });
+
+  //-----DOES NOT Get Pokemon-----
+  describe("GET BY ID 'Pokemon/'", () => {
+    it("Should not get one Pokemon", async () => {
+      const res = await request(app)
+        .get("/Pokemon/" + wierdId.toString())
+        .set("Authorization", "Bearer " + token);
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toEqual(
+        "Could not find this Pokemon with id: " + wierdId
+      );
     });
   });
 
@@ -146,6 +216,35 @@ describe("Pokemon", () => {
     });
   });
 
+  //-----DOES NOT Update Pokemon-----
+  describe("UPDATE BY ID 'Pokemon/'", () => {
+    it("Should not update one Pokemon", async () => {
+      const pokemons = db.collection("pokemons");
+
+      const pokemon = await pokemons.findOne({
+        _id: mongoose.Types.ObjectId(idPokemon),
+      });
+
+      const updatePokemon = {
+        stars: 500,
+      };
+
+      const res = await request(app)
+        .patch("/Pokemon/" + notYoursId.toString())
+        .set("Authorization", "Bearer " + token)
+        .send(updatePokemon)
+        .set("Content-Type", "application/json");
+      expect(res.statusCode).toBe(401);
+      expect(res.body.message).toEqual("Not authorized >_<");
+
+      const updatedPokemon = await pokemons.findOne({
+        _id: mongoose.Types.ObjectId(idPokemon),
+      });
+
+      expect(pokemon.stars).toEqual(updatedPokemon.stars);
+    });
+  });
+
   //-----Delete Pokemon-----
   describe("DELETE 'Pokemon/'", () => {
     it("should delete a Pokemon", async () => {
@@ -180,6 +279,17 @@ describe("Pokemon", () => {
         .delete("/Pokemon/" + addedPokemonId.toString())
         .set("Authorization", "Bearer " + token);
       expect(res.statusCode).toBe(200);
+    });
+  });
+
+  //-----DOES NOT Delete Pokemon-----
+  describe("DELETE 'Pokemon/'", () => {
+    it("should not delete a Pokemon", async () => {
+      const res = await request(app)
+        .delete("/Pokemon/" + notYoursId.toString())
+        .set("Authorization", "Bearer " + token);
+      expect(res.statusCode).toBe(401);
+      expect(res.body.message).toEqual("Not authorized >_<");
     });
   });
 });
