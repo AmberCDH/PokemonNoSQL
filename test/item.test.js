@@ -51,7 +51,7 @@ describe("Item", () => {
       process.env.NEO4J_URI,
       neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
     );
-    session = driver.session();
+    session = driver.session({database:process.env.NEO4J_DATABASE_NAME});
     const result = await request(app)
       .post("/Trainer/Login")
       .send({ email: "della@mail.com", password: "Wachtwoord" })

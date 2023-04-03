@@ -17,7 +17,7 @@ const port = process.env.PORT;
 mongoose.set('strictQuery', false);
 const driver = neo4j.driver(
   process.env.NEO4J_URI,
-  neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
+  neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD),
 );
 
 mongoose.connect(mongoString);
@@ -34,7 +34,7 @@ database.once("connected", () => {
 const app = express();
 
 app.get("/get", async (req, res) => {
-  const session = driver.session();
+  const session = driver.session({database:process.env.NEO4J_DATABASE_NAME});
   const response = session.run(`MATCH (n) RETURN n`);
 
   res.json({

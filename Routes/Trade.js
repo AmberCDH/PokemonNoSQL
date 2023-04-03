@@ -12,7 +12,7 @@ const driver = neo4j.driver(
   process.env.NEO4J_URI,
   neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
 );
-const session = driver.session();
+const session = driver.session({database:process.env.NEO4J_DATABASE_NAME});
 
 //Get all TRADE requests by trainer
 router.get("/", authenticateToken.authenticateToken, async (req, res) => {

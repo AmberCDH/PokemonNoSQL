@@ -25,7 +25,7 @@ mongoose.connect(mongoString);
 const app = express();
 
 app.get("/get", async (req, res) => {
-  const session = driver.session();
+  const session = driver.session({database:process.env.NEO4J_DATABASE_NAME});
   const response = session.run(`MATCH (n) RETURN n`);
 
   res.json({

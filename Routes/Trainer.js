@@ -11,7 +11,7 @@ const driver = neo4j.driver(
   process.env.NEO4J_URI,
   neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
 );
-const session = driver.session();
+const session = driver.session({database:process.env.NEO4J_DATABASE_NAME});
 
 //Get All Trainers
 router.get("/", authenticateToken.authenticateToken, async (req, res, next) => {
@@ -132,7 +132,7 @@ router.post("/", async (req, res) => {
 
 //Check and create a region
 async function checkAndCreateRegion(regionName, champion, idTrainer, bool) {
-  const sessionTwo = driver.session();
+  const sessionTwo = driver.session({database:process.env.NEO4J_DATABASE_NAME});
   var exists;
   try {
     if (bool) {
