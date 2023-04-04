@@ -9,7 +9,7 @@ const driver = neo4j.driver(
   process.env.NEO4J_URI,
   neo4j.auth.basic(process.env.NEO4J_DB_NAME, process.env.NEO4J_PASSWORD)
 );
-const session = driver.session({database:process.env.NEO4J_DATABASE_NAME});
+const session = driver.session({ database: process.env.NEO4J_DATABASE_NAME });
 
 //get all regions
 router.get("/", authenticateToken.authenticateToken, async (req, res) => {
@@ -75,13 +75,19 @@ router.post(
       var tradesPokemon = [];
       var tradesItem = [];
       const getTrainerWMostTrades = await session.run(
-        `MATCH (n:Region {regionName:$regionName}) MATCH (a)<-[:IS_IN]-(b: Trainer) MATCH (b)-[d:TRADES]->(c) RETURN b, COUNT(d) ORDER BY COUNT(d) DESC LIMIT 1`,
+        `MATCH (n:Region {regionName:$regionName}) MATCH (n)<-[:IS_IN]-(b: Trainer) MATCH (b)-[d:TRADES]->(c) RETURN b, COUNT(d) ORDER BY COUNT(d) DESC LIMIT 1`,
         { regionName: regionName }
       );
       getTrainerWMostTrades.records.forEach(function (record) {
         trainers.push(record._fields[0].properties);
-        id = record._fields[0].properties._id
+        id = record._fields[0].properties._id;
       });
+      if (trainers.length <= 0) {
+        return res
+          .status(400)
+          .json({ Message: "No one trades in this region" })
+          .end();
+      }
       const getTrades = await session.run(
         `MATCH (a:Trainer{_id:$trainerId}) MATCH (a)-[:TRADES]->(c) RETURN c`,
         { trainerId: id }
@@ -96,24 +102,19 @@ router.post(
         }
       });
       const itemResults = await ItemModel.find({ _id: { $in: tradesItem } });
-      const pokemonResults = await PokemonModel.find({ _id: { $in: tradesPokemon } });
+      const pokemonResults = await PokemonModel.find({
+        _id: { $in: tradesPokemon },
+      });
 
-      if (trainers.length > 0) {
-        return res
-          .status(200)
-          .json({
-            Tradings: {
-              TrainerWithTheMostTrades: trainers,
-              Trades: { Pokemon: pokemonResults, Items: itemResults },
-            },
-          })
-          .end();
-      } else {
-        return res
-          .status(400)
-          .json({ Message: "No one trades in this region" })
-          .end();
-      }
+      return res
+        .status(200)
+        .json({
+          Tradings: {
+            TrainerWithTheMostTrades: trainers,
+            Trades: { Pokemon: pokemonResults, Items: itemResults },
+          },
+        })
+        .end();
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
